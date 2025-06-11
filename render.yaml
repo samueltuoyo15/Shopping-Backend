@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: shopping-backend
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: PORT
+        value: 5000
