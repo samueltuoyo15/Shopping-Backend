@@ -38,7 +38,7 @@ func AuthenticateRequest(authClient *auth.Client) fiber.Handler {
 			})
 		}
 
-		c.Locals("user", verifiedToken.UID)
+		c.Locals("userId", verifiedToken.UID)
 
 		return c.Next()
 	}
