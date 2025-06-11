@@ -28,13 +28,13 @@ func main() {
 
 	app := fiber.New()
 	app.Use(helmet.New())
-	frontendOrigin := os.Getenv("FRONTEND_DOMAIN")
-	if frontendOrigin == "" {
-		log.Fatal("FRONTEND_DOMAIN environment variable is not set")
-	}
+	// frontendOrigin := os.Getenv("FRONTEND_DOMAIN")
+	// if frontendOrigin == "" {
+	// 	log.Fatal("FRONTEND_DOMAIN environment variable is not set")
+	// }
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: frontendOrigin,
+		AllowOrigins: "*",
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
 	}))
