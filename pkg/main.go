@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"shopping-backend/controller"
 	"shopping-backend/database"
 	"shopping-backend/utils"
@@ -25,7 +27,17 @@ func main() {
 	log.Println("Successfully initialized Firebase app")
 
 	app := fiber.New()
+	app.Use(helmet.New())
+	frontendOrigin := os.Getenv("FRONTEND_DOMAIN")
+	if frontendOrigin == "" {
+		log.Fatal("FRONTEND_DOMAIN environment variable is not set")
+	}
 
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: frontendOrigin,
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
+	}))
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Shopping backend api running")
 	})
