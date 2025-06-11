@@ -80,7 +80,7 @@ A robust and scalable backend API built with **Go**, **Fiber**, and **Firebase**
 ### Base URL
 
 ```
-http://localhost:5000
+https://shopping-backend-9cf2.onrender.com
 ```
 
 ### Endpoints
