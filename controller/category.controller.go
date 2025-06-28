@@ -12,17 +12,20 @@ import (
 
 const (
 	cacheKey = "categories:list"
-	cacheTtl = 5 * time.Minute
-	queryTimeout = 2 * time.Second
+	cacheTtl = 30 * time.Minute
+	queryTimeout = 1 * time.Second
 )
 
 func GetCategories(firestoreClient *firestore.Client, redisClient *redis.Client) fiber.Handler{
 	return func(c *fiber.Ctx) error {
+		log.Println("Get categories endpoint hit")
 		cachedCategories, err := redisClient.Get(c.Context(), cacheKey).Result()
 		if err == nil {
 			var result fiber.Map
 			if err := json.Unmarshal([]byte(cachedCategories), &result); err == nil {
+				log.Println("serving from redis cache", result)
 				return c.JSON(result)
+				log.Println("returned categories from redis cache")
 			}
 			log.Printf("Error decoding cache: %v", err)
 		}
@@ -46,13 +49,16 @@ func GetCategories(firestoreClient *firestore.Client, redisClient *redis.Client)
 		}
 
 		go func(){
-			data, _ := json.Marshal(fiber.Map{
+			data, err := json.Marshal(fiber.Map{
 			"success": true,
 			"count": len(categoryNames),
 			"list": categoryNames,	
-			"source": "database",	
+			"source": "redis_cache",	
 			})
-
+			
+			if err != nil {
+				log.Println("Json marshal error", nil)
+			}
 			if err := redisClient.Set(context.Background(), cacheKey, data, cacheTtl).Err(); err != nil {
 				log.Printf("failed to update redis cache: %v", err)
 			}
