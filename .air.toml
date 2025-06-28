@@ -6,7 +6,7 @@ tmp_dir = "tmp"
 
 [build]
   bin = "tmp/main.exe"
-  cmd = "go build -o ./tmp/main.exe ./pkg"
+  cmd = "go build -o ./tmp/main.exe ./cmd"
   delay = 1000
   exclude_regex = [
   "^\\.git(/|$)",

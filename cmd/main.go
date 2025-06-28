@@ -4,8 +4,10 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"github.com/redis/go-redis/v9"
 	"net/http"
 	"time"
+	"context"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -26,12 +28,21 @@ func main() {
 
 	log.Println("Successfully initialized Firebase app")
 
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+		Password: "",
+		DB: 0,
+	})
+	_, err = redisClient.Ping(context.Background()).Result()
+	if err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+	}
+	log.Println("Successfully connected to Redis")
+	defer redisClient.Close()
+	
 	app := fiber.New()
 	app.Use(helmet.New())
-	// frontendOrigin := os.Getenv("FRONTEND_DOMAIN")
-	// if frontendOrigin == "" {
-	// 	log.Fatal("FRONTEND_DOMAIN environment variable is not set")
-	// }
+	
 
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
@@ -44,7 +55,8 @@ func main() {
 	
 	app.Post("/api/auth/register", controller.RegisterUser(firebaseApp.Auth, firebaseApp.Client))
 	app.Post("/api/auth/login", controller.LoginUser(firebaseApp.Auth, firebaseApp.Client))
-	app.Get("/api/user/me", middleware.AuthenticateRequest(firebaseApp.Auth), controller.Me(firebaseApp.Client))
+	app.Post("/api/categories/getCategories", controller.GetCategories(firebaseApp.Client, redisClient))
+	app.Get("/api/user/me", middleware.AuthenticateRequest(firebaseApp.Auth), controller.Me(firebaseApp.Client, redisClient))
 	app.Get("/api/keep-alive", func(c *fiber.Ctx) error {
 		var memoryUsg runtime.MemStats
 		runtime.ReadMemStats(&memoryUsg)
