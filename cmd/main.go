@@ -54,6 +54,7 @@ func main() {
 	app.Post("/api/auth/register", internal.RegisterUser(firebaseApp.Auth, firebaseApp.Client))
 	app.Post("/api/auth/login", internal.LoginUser(firebaseApp.Auth, firebaseApp.Client))
 	app.Get("/api/categories/getCategories", internal.GetCategories(firebaseApp.Client, redisClient))
+	app.Get("/api/categories/getProducts", internal.GetProducts(firebaseApp.Client, redisClient))
 	app.Get("/api/user/me", middleware.AuthenticateRequest(firebaseApp.Auth), internal.Me(firebaseApp.Client, redisClient))
 	app.Get("/api/health-check", func(c *fiber.Ctx) error {
 		var memoryUsg runtime.MemStats
