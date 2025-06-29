@@ -157,8 +157,78 @@ or uses the accessToken cookie.
 - 401: Unauthorized (missing or invalid access token)
 - 404: User not found
 
-#### GET /api/keep-alive
-Used to keep the backend service active.
+
+#### GET /categories/getCategories
+Retrieves the list of available list of categories of products e.g Electronics. Results are cached using Redis to improve performance by the way.
+
+
+**Response**:
+```json
+{"count":15,
+"list":["Baby's & Toy's","Camera","Computers","Electronics","Gaming","Groceries & Pets","HeadPhone","Health & Beauty","Home & Lifestyle","Man's Fashion","Medicine","Phones","SmartWatch","Sports & Outdoors","Woman's Fashion"],"source":"firestore",
+"success":true}
+```
+
+
+**Caching**:
+- This endpoint is cached using Redis to make the response time faster
+- cached results are automatically invalidated after 5 minutes
+
+**Errors**:
+- 500: Failed to fetch categories or Internal Server Error
+
+
+
+#### GET /categories/getProducts
+Retrieves the list of available products. Results are cached using Redis to improve performance by the way.
+
+
+**Response**:
+```json
+[
+  {
+    "id": 1,
+    "title": "Fjallraven - Foldsack No. 1 Backpack",
+    "price": 109.95,
+    "description": "Your perfect pack for everyday use and walks in the forest.",
+    "category": "men's clothing",
+    "image": "https://fakestoreapi.com/img/81fPKd-2AYL._AC_SL1500_.jpg",
+    "rating": {
+      "rate": 3.9,
+      "count": 120
+    }
+  },
+  ...
+]
+```
+
+### Optional Query Parameters
+This endpoint supports query parameters to filter or limit the results, which will also affect caching. If different query parameters are provided, a separate cache will be created for that unique query.
+
+Examples:
+```
+GET /api/categories/getProducts?limit=5
+Returns only 5 products from the list
+```
+
+```
+GET /api/categories/getProducts?sort=desc
+Returns products sorted in descending order 
+```
+
+Note: Any combination of query params (e.g. ?sort=asc&limit=3) will generate a unique cache key, ensuring accurate responses.
+
+
+**Caching**:
+- This endpoint is cached using Redis to make the response time faster
+- cached results are automatically invalidated after 5 minutes
+
+**Errors**:
+- 500: Failed to fetch products or Internal Server Error
+
+
+#### GET /api/health-check
+health check endpoint.
 
 **Response**:
 ```json

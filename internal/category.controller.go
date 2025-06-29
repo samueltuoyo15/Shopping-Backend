@@ -6,6 +6,7 @@ import (
 	"log"
 	"io"
 	"net/http"
+	"net/url"
 	"github.com/redis/go-redis/v9"
 	"time"
 	"github.com/gofiber/fiber/v2"
@@ -15,7 +16,7 @@ import (
 const (
 	categoriesCacheKey = "categories:list"
 	productsCacheKey = "products:list"
-	cacheTtl = 30 * time.Minute
+	cacheTtl = 10 * time.Minute
 	queryTimeout = 1 * time.Second
 )
 
@@ -71,7 +72,7 @@ func GetCategories(firestoreClient *firestore.Client, redisClient *redis.Client)
 			"source": "redis_cache",	
 			}
 			data, err := json.Marshal(cachedData)
-			
+
 			if err != nil {
 				log.Println("Json marshal error", nil)
 			}
@@ -93,8 +94,22 @@ func GetProducts(firestoreClient *firestore.Client, redisClient *redis.Client) f
 	return func(c *fiber.Ctx) error {
 			log.Println("Get products endpoint hit")
 			start := time.Now()
+			
+			queryArgs := c.Context().QueryArgs()
+			params := url.Values{}
+			queryArgs.VisitAll(func(key, value[]byte) {
+				params.Add(string(key), string(value))
+			})
+			sortedQuery := params.Encode()
+		
+			cacheKey := productsCacheKey
+			log.Println("cacheKey", cacheKey)
+			if sortedQuery != "" {
+				cacheKey += ":" + sortedQuery
+				log.Println("cacheKey", cacheKey)
+			}
 
-			cachedProducts, err := redisClient.Get(context.Background(), productsCacheKey).Result()
+			cachedProducts, err := redisClient.Get(context.Background(), cacheKey).Result()
 			log.Println("redis read took:", time.Since(start))
 			if err == nil {
 				log.Println("Returned Products from redis cache and serving", time.Since(start))
@@ -104,8 +119,13 @@ func GetProducts(firestoreClient *firestore.Client, redisClient *redis.Client) f
 
 			ctx, cancel := context.WithTimeout(c.Context(), queryTimeout)
 			defer cancel()
-
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://fakestoreapi.com/products/", nil)
+			
+			baseUrl := "https://fakestoreapi.com/products"
+			if sortedQuery != "" {
+				baseUrl += "?" + sortedQuery
+			}
+		
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseUrl, nil)
 			if err != nil {
 				log.Println("Failed to fetch products", err.Error())
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -139,7 +159,7 @@ func GetProducts(firestoreClient *firestore.Client, redisClient *redis.Client) f
 				}
 
 			go func(){
-				if err := redisClient.Set(context.Background(), productsCacheKey, body, cacheTtl).Err(); err != nil {
+				if err := redisClient.Set(context.Background(), cacheKey, body, cacheTtl).Err(); err != nil {
 					log.Printf("failed to update redis cache with the products: %v", err)
 				}
 		  }()
