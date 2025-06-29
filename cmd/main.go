@@ -2,20 +2,18 @@ package main
 
 import (
 	"log"
-	"os"
 	"runtime"
 	"github.com/redis/go-redis/v9"
-	"net/http"
 	"time"
+	"os"
 	"context"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"shopping-backend/controller"
+	"shopping-backend/internal"
+	"shopping-backend/internal/middleware"
 	"shopping-backend/database"
 	"shopping-backend/utils"
-	"github.com/robfig/cron/v3"
-	"shopping-backend/middleware"
 )
 
 var startTime = time.Now()
@@ -53,11 +51,11 @@ func main() {
 		return c.SendString("Shopping backend api running")
 	})
 	
-	app.Post("/api/auth/register", controller.RegisterUser(firebaseApp.Auth, firebaseApp.Client))
-	app.Post("/api/auth/login", controller.LoginUser(firebaseApp.Auth, firebaseApp.Client))
-	app.Get("/api/categories/getCategories", controller.GetCategories(firebaseApp.Client, redisClient))
-	app.Get("/api/user/me", middleware.AuthenticateRequest(firebaseApp.Auth), controller.Me(firebaseApp.Client, redisClient))
-	app.Get("/api/keep-alive", func(c *fiber.Ctx) error {
+	app.Post("/api/auth/register", internal.RegisterUser(firebaseApp.Auth, firebaseApp.Client))
+	app.Post("/api/auth/login", internal.LoginUser(firebaseApp.Auth, firebaseApp.Client))
+	app.Get("/api/categories/getCategories", internal.GetCategories(firebaseApp.Client, redisClient))
+	app.Get("/api/user/me", middleware.AuthenticateRequest(firebaseApp.Auth), internal.Me(firebaseApp.Client, redisClient))
+	app.Get("/api/health-check", func(c *fiber.Ctx) error {
 		var memoryUsg runtime.MemStats
 		runtime.ReadMemStats(&memoryUsg)
 
@@ -73,29 +71,6 @@ func main() {
 		})
 	})
 
-	cronJob := cron.New()
-	_, err = cronJob.AddFunc("@every 14m", func(){
-		backendDomain := os.Getenv("BACKEND_DOMAIN")
-	if backendDomain == "" {
-		log.Fatal("Environment variable BACKEND_DOMAIN is not set")
-	}
-
-		log.Println("Cron job running and keeping render service up every 14 minutes")
-		
-		resp, err := http.Get(backendDomain + "/api/keep-alive")
-		if err != nil {
-			log.Printf("Keep-alive request failed: %v", err)
-			return
-		}
-		defer resp.Body.Close()
-		log.Printf("keep alive request completed with status: %s", resp.Status)
-	})
-	
-	if err != nil {
-		log.Fatalf("Failed to schedule cron job: %v", err)
-	}
-
-	cronJob.Start()
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "5000"
